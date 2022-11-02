@@ -16,7 +16,33 @@ namespace EventManager.Games
     {
         public static bool IsStarted;
 
+        public static ZoneType StartZone;
+
         public static Dictionary<Player, int> PlayersGunRank = new Dictionary<Player, int>();
+
+        public void Init()
+        {
+            if (!Plugin.Singleton.Config.GunGameCustomSpawn)
+            {
+                switch (Plugin.Singleton.Config.GunGameZone)
+                {
+                    case ZoneType.Surface:
+                    case ZoneType.Entrance:
+                    case ZoneType.HeavyContainment:
+                    case ZoneType.LightContainment:
+                        StartZone = Plugin.Singleton.Config.GunGameZone;
+                        break;
+                    default:
+                        Log.Warn($"[GUNGAME] config gun_game_zone has not a ZoneType (Surface,Entrance, HeavyContainment or LightContainment). I choose default zone, {ZoneType.HeavyContainment}.");
+                        StartZone = ZoneType.HeavyContainment;
+                        break;
+                }
+            }
+            else
+            {
+                StartZone = ZoneType.Unspecified;
+            }
+        }
 
         public static void Start(Player Starter)
         {
@@ -52,20 +78,29 @@ namespace EventManager.Games
         {
             foreach (Player plr in PlayersGunRank.Keys)
             {
-                bool ro = true;
-                Room room = Room.Random(ZoneType.HeavyContainment);
-                while (ro)
+                if (Plugin.Singleton.Config.GunGameCustomSpawn)
                 {
-                    if (room.Type == RoomType.Pocket)
-                    {
-                        room = Room.Random(ZoneType.HeavyContainment);
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    Vector3 CustomSpawn = Plugin.Singleton.Config.GunGameCustomSpawnLocation;
+                    plr.Position = CustomSpawn + new Vector3(0, 1, 0);
                 }
-                plr.Position = room.Position + new Vector3(0,1,0);
+                else
+                {
+                    Room room = Room.Random(StartZone);
+                    while (true)
+                    {
+                        if (room.Type == RoomType.Pocket || room.Type == RoomType.HczArmory || room.Type == RoomType.HczEzCheckpoint || room.Type == RoomType.Hcz096 || room.Type == RoomType.HczChkpA || room.Type == RoomType.HczChkpB || room.Type == RoomType.LczChkpA || room.Type == RoomType.LczChkpB || room.Type == RoomType.LczArmory || room.Type == RoomType.EzCollapsedTunnel)
+                        {
+                            room = Room.Random(StartZone);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    plr.Position = room.Position + new Vector3(0, 1, 0);
+                }
+                string StartMsg = Plugin.Singleton.Config.GunGameStartMsg.Replace("{time}",Plugin.Singleton.Config.GunGameSpawnProtectTime.ToString());
+                plr.ShowHint(StartMsg,Plugin.Singleton.Config.GunGameSpawnProtectTime);
                 ChangeItem(plr, PlayersGunRank[plr]);
             }
         }
@@ -84,7 +119,6 @@ namespace EventManager.Games
         {
             if (PlayersGunRank.ContainsKey(AddRank))
             {
-                AddRank.ShowHint(Plugin.Singleton.Config.GunGameLostLevel);
                 PlayersGunRank[AddRank] -= 1;
                 ChangeItem(AddRank, PlayersGunRank[AddRank]);
             }
@@ -95,6 +129,13 @@ namespace EventManager.Games
         {
             plr.ClearInventory();
 
+            if (NewRank <= 0)
+            {
+                plr.AddItem(ItemType.MicroHID);
+                plr.AddItem(ItemType.MicroHID);
+                plr.AddItem(ItemType.MicroHID);
+                plr.AddItem(ItemType.Adrenaline);
+            }
             if (NewRank == 1)
             {
                 plr.AddItem(ItemType.MicroHID);
@@ -213,7 +254,6 @@ namespace EventManager.Games
         {
             if (IsStarted)
             {
-                ev.Tesla.IsIdling = false;
                 ev.IsTriggerable = false;
             }
             else
@@ -238,13 +278,23 @@ namespace EventManager.Games
                 if (ev.Killer != null)
                 {
                     if (ev.Killer == ev.Target)
+                    {
                         LostLevel(ev.Killer);
+                        ev.Target.ShowHint(Plugin.Singleton.Config.GunGameLostLevel, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
+                    }
                     else
+                    {
                         AddLevel(ev.Killer);
+                        string DeadMsg = Plugin.Singleton.Config.GunGameDeadMsg.Replace("{time}", Plugin.Singleton.Config.GunGameTimeBeforeRespawning.ToString());
+                        ev.Target.ShowHint(DeadMsg, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
+                    }
+                }
+                if (ev.Killer == null)
+                {
+                    string DeadMsg = Plugin.Singleton.Config.GunGameDeadMsg.Replace("{time}", Plugin.Singleton.Config.GunGameTimeBeforeRespawning.ToString());
+                    ev.Target.ShowHint(DeadMsg, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
                 }
 
-                string DeadMsg = Plugin.Singleton.Config.GunGameDeadMsg.Replace("{time}",Plugin.Singleton.Config.GunGameTimeBeforeRespawning.ToString());
-                ev.Target.ShowHint(DeadMsg, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
                 Timing.CallDelayed(Plugin.Singleton.Config.GunGameTimeBeforeRespawning, () => {Spawn(ev.Target); });
             }
         }
@@ -254,8 +304,27 @@ namespace EventManager.Games
             Spawner.SetRole(RoleType.ClassD, SpawnReason.Revived);
             Timing.CallDelayed(2f, () =>
             {
-                Room room = Room.Random(ZoneType.HeavyContainment);
-                Spawner.Position = room.Position + new Vector3(0, 1, 0);
+                if (Plugin.Singleton.Config.GunGameCustomSpawn)
+                {
+                    Vector3 CustomSpawn = Plugin.Singleton.Config.GunGameCustomSpawnLocation;
+                    Spawner.Position = CustomSpawn + new Vector3(0, 1, 0);
+                }
+                else
+                {
+                    Room room = Room.Random(StartZone);
+                    while (true)
+                    {
+                        if (room.Type == RoomType.Pocket || room.Type == RoomType.HczArmory || room.Type == RoomType.HczEzCheckpoint || room.Type == RoomType.Hcz096 || room.Type == RoomType.HczChkpA || room.Type == RoomType.HczChkpB || room.Type == RoomType.LczChkpA || room.Type == RoomType.LczChkpB || room.Type == RoomType.LczArmory || room.Type == RoomType.EzCollapsedTunnel)
+                        {
+                            room = Room.Random(StartZone);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    Spawner.Position = room.Position + new Vector3(0, 1, 0);
+                }
                 ChangeItem(Spawner, PlayersGunRank[Spawner]);
             });
         }
@@ -269,6 +338,16 @@ namespace EventManager.Games
             else
             {
                 ev.IsAllowed = true;
+            }
+        }
+
+        public void RoundRestart()
+        {
+            if (IsStarted)
+            {
+                Plugin.GameAlreadyEnabled = false;
+                IsStarted = false;
+                PlayersGunRank.Clear();
             }
         }
 

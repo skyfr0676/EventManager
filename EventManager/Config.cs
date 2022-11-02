@@ -1,5 +1,6 @@
 ﻿using Exiled.API.Enums;
 using Exiled.API.Interfaces;
+using System.Collections.Generic;
 using System.ComponentModel;
 using UnityEngine;
 
@@ -11,13 +12,13 @@ namespace EventManager
 
         public bool Debug { get; set; } = false;
 
-        [Description("not yet implemented")]
+        [Description("the areas where the fight takes place (Surface,Entrance, HeavyContainment and LightContainment)")]
         public ZoneType GunGameZone { get; set; } = ZoneType.HeavyContainment;
 
-        [Description("If CustomSpawn = false, The configuration \"Zone\" will be used (not yet implemented)")]
+        [Description("If CustomSpawn = false, The configuration \"Zone\" will be used")]
         public bool GunGameCustomSpawn { get; set; } = false;
 
-        [Description("used only if CustomSpawn = true. Teleport the player to the spawn. useful if you have custom Map (not yet implemented)")]
+        [Description("used only if CustomSpawn = true. Teleport the player to the spawn. useful if you have custom Map")]
         public Vector3 GunGameCustomSpawnLocation { get; set; } = new Vector3(0, 1, 0);
 
         public string GunGameDoorunauthorized { get; set; } = "<color=red><size=150%><b>You can't use checkpoint or armory in gun game mode !</b></size></color>";
@@ -43,5 +44,9 @@ namespace EventManager
         public string GunGameLostLevel { get; set; } = "you lost level because you kill you";
 
         public float GunGameSpawnProtectTime { get; set; } = 5f;
+
+        public string GunGameStartMsg { get; set; } = "the game start in {time} seconds !";
+
+        //public List<ItemType> GunGameOrder { get; set; } = new List<ItemType>(){};
     }
 }
