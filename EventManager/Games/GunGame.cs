@@ -80,6 +80,16 @@ namespace EventManager.Games
             }
         }
 
+        public static void LostLevel(Player AddRank)
+        {
+            if (PlayersGunRank.ContainsKey(AddRank))
+            {
+                AddRank.ShowHint(Plugin.Singleton.Config.GunGameLostLevel);
+                PlayersGunRank[AddRank] -= 1;
+                ChangeItem(AddRank, PlayersGunRank[AddRank]);
+            }
+        }
+
         //Current order : Micro-HID, 3-X Particle Disrupter, Logicer, Shotgun, AK, MTF-E11-SR, Crossvec, FSP-9, .44 Revolver, COM-18, COM-15, Grenade
         public static void ChangeItem(Player plr,int NewRank)
         {
@@ -90,7 +100,6 @@ namespace EventManager.Games
                 plr.AddItem(ItemType.MicroHID);
                 plr.AddItem(ItemType.MicroHID);
                 plr.AddItem(ItemType.MicroHID);
-                plr.AddItem(ItemType.Painkillers);
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 2)
@@ -98,78 +107,68 @@ namespace EventManager.Games
                 plr.AddItem(ItemType.ParticleDisruptor);
                 plr.AddItem(ItemType.ParticleDisruptor);
                 plr.AddItem(ItemType.ParticleDisruptor);
-                plr.AddItem(ItemType.Painkillers);
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 3)
             {
                 plr.AddItem(ItemType.GunLogicer);
                 plr.AddAmmo(ItemType.GunLogicer.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 4)
             {
                 plr.AddItem(ItemType.GunShotgun);
                 plr.SetAmmo(ItemType.GunLogicer.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunShotgun.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunShotgun.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 5)
             {
                 plr.AddItem(ItemType.GunAK);
                 plr.SetAmmo(ItemType.GunShotgun.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunAK.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunAK.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 6)
             {
                 plr.AddItem(ItemType.GunE11SR);
                 plr.SetAmmo(ItemType.GunAK.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunE11SR.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunE11SR.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 7)
             {
                 plr.AddItem(ItemType.GunCrossvec);
                 plr.SetAmmo(ItemType.GunE11SR.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunCrossvec.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunCrossvec.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 8)
             {
                 plr.AddItem(ItemType.GunFSP9);
                 plr.SetAmmo(ItemType.GunCrossvec.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunFSP9.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunFSP9.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 9)
             {
                 plr.AddItem(ItemType.GunRevolver);
                 plr.SetAmmo(ItemType.GunFSP9.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunRevolver.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunRevolver.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 10)
             {
                 plr.AddItem(ItemType.GunCOM18);
                 plr.SetAmmo(ItemType.GunRevolver.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunCOM18.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunCOM18.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 11)
             {
                 plr.AddItem(ItemType.GunCOM15);
                 plr.SetAmmo(ItemType.GunCOM18.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunCOM15.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Painkillers);
+                plr.AddAmmo(ItemType.GunCOM15.GetWeaponAmmoType(), 500);                
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank == 12)
@@ -178,12 +177,14 @@ namespace EventManager.Games
                 plr.AddItem(ItemType.GrenadeHE);
                 plr.AddItem(ItemType.GrenadeHE);
                 plr.AddItem(ItemType.GrenadeHE);
-                plr.AddItem(ItemType.Painkillers);
                 plr.AddItem(ItemType.Adrenaline);
             }
             if (NewRank >= 13)
             {
                 plr.ClearInventory();
+                plr.AddItem(ItemType.ParticleDisruptor);
+                plr.AddItem(ItemType.ParticleDisruptor);
+                plr.AddItem(ItemType.ParticleDisruptor);
                 foreach (Player Left in Player.List.Where(x => x.UserId != plr.UserId))
                 {
                     Left.SetRole(RoleType.Spectator,SpawnReason.Overwatch);
@@ -235,7 +236,13 @@ namespace EventManager.Games
             if (IsStarted)
             {
                 if (ev.Killer != null)
-                    AddLevel(ev.Killer);
+                {
+                    if (ev.Killer == ev.Target)
+                        LostLevel(ev.Killer);
+                    else
+                        AddLevel(ev.Killer);
+                }
+
                 string DeadMsg = Plugin.Singleton.Config.GunGameDeadMsg.Replace("{time}",Plugin.Singleton.Config.GunGameTimeBeforeRespawning.ToString());
                 ev.Target.ShowHint(DeadMsg, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
                 Timing.CallDelayed(Plugin.Singleton.Config.GunGameTimeBeforeRespawning, () => {Spawn(ev.Target); });
@@ -251,6 +258,18 @@ namespace EventManager.Games
                 Spawner.Position = room.Position + new Vector3(0, 1, 0);
                 ChangeItem(Spawner, PlayersGunRank[Spawner]);
             });
+        }
+
+        public void PickupItem(PickingUpItemEventArgs ev)
+        {
+            if (IsStarted)
+            {
+                ev.IsAllowed = false;
+            }
+            else
+            {
+                ev.IsAllowed = true;
+            }
         }
 
         public void Left(LeftEventArgs ev)

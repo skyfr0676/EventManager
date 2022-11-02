@@ -31,6 +31,7 @@ namespace EventManager
             Event.Player.TriggeringTesla += GunGame.Tesla;
             Event.Player.Left += GunGame.Left;
             Event.Player.Verified += GunGame.Verified;
+            Event.Player.PickingUpItem += GunGame.PickupItem;
             #endregion
             base.OnEnabled();
         }
@@ -44,6 +45,7 @@ namespace EventManager
             Event.Player.TriggeringTesla -= GunGame.Tesla;
             Event.Player.Left -= GunGame.Left;
             Event.Player.Verified -= GunGame.Verified;
+            Event.Player.PickingUpItem -= GunGame.PickupItem;
             GunGame = null;
             #endregion
             Singleton = null;

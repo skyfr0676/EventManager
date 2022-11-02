@@ -40,6 +40,8 @@ namespace EventManager
 
         public string GunGameNextLevel { get; set; } = "<color=yellow>you grant a level !</color>";
 
+        public string GunGameLostLevel { get; set; } = "you lost level because you kill you";
+
         public float GunGameSpawnProtectTime { get; set; } = 5f;
     }
 }
