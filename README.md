@@ -18,6 +18,7 @@ in 'EXILED\Config\', you probably found **'{your port}-config.yml'**. in to the 
 Let's explain it in a table!
 
 
+## GunGame Mode
 | Config Name | Description | Type
 | :-------------: | :---------: | :---------:
 | gun_game_doorunauthorized | called when the player want to open hcz armory, checkpoint with the gungame was started. | **string**
