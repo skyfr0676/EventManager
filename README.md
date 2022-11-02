@@ -32,3 +32,4 @@ Let's explain it in a table!
 | gun_game_next_level | called when the player win a level | **string**
 | gun_game_lost_level | called when the player kill him | **string**
 | gun_game_spawn_protect_time | used for the spawn protect time (0 = none) | **float**
+| gun_game_start_msg | called when the game was started | **string**
