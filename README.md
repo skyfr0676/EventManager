@@ -3,8 +3,8 @@
 EventManager is an [Scp: Secret Laboratory](https://store.steampowered.com/app/700330/SCP_Secret_Laboratory/) plugin created to add event system for server to add some... [fun](https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley) in the game.
 
 ## index
->- <a href="readme.md/installation">Installation</a>
->- <a href="readme.md/config">Configuration</a>
+>- <a href="#installation">Installation</a>
+>- <a href="#config">Configuration</a>
 
 # installation
 
