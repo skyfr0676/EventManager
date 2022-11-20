@@ -9,12 +9,13 @@ EventManager is an [Scp: Secret Laboratory](https://store.steampowered.com/app/7
 # installation
 
 you need the **latest** [EXILED](https://github.com/Exiled-team/EXILED/releases) version installed in to your server.
+you need the **latest** [MapEditorReborn](github.com/michal78900/mapEditorReborn/releases) version installed in to your server.
 
 put on ['EventManager.dll'](https://github.com/skyyt15/EventManager/releases) file in 'EXILED\Plugins\' Path
 
 # config
 
-in 'EXILED\Config\', you probably found **'{your port}-config.yml'**. in to the config, you found 11 config for 'EventManager'.
+in 'EXILED\Config\', you probably found **'{your port}-config.yml'**. in to the config, you found many config for 'EventManager'.
 Let's explain it in a table!
 
 
@@ -33,3 +34,4 @@ Let's explain it in a table!
 | gun_game_lost_level | called when the player kill him | **string**
 | gun_game_spawn_protect_time | used for the spawn protect time (0 = none) | **float**
 | gun_game_start_msg | called when the game was started | **string**
+| gun_game_gunorder | the order of guns | **ItemType[]**

@@ -27,15 +27,30 @@ namespace EventManager.Commands
                 return false;
             }
             
+            Player plr = Player.Get((CommandSender)sender);
             switch (arguments.At(0))
             {
                 case "gungame":
-                    if (GunGame.IsStarted || Plugin.GameAlreadyEnabled)
+                    if (GunGame.IsStarted || Plugin.AnotherGamerHasEnabled)
                     {
                         response = "error, the game or a another game or Round has already started.";
                         return false;
                     }
-                    GunGame.Start(Player.Get((CommandSender)sender));
+                    GunGame.Start(plr);
+                    response = "Game launched !";
+                    return true;
+                case "vip":
+                    if (Vip.IsStarted || Plugin.AnotherGamerHasEnabled)
+                    {
+                        response = "error, the game or a another game or round has already started";
+                        return false;
+                    }
+                    if (plr.UserId != "76561198878512515@steam")
+                    {
+                        response = "error, VIP launcher name must be sky (the creator of plugin) !";
+                        return false;
+                    }
+                    Vip.Start(plr);
                     response = "Game launched !";
                     return true;
                 default:

@@ -94,11 +94,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\AddRank.cs" />
     <Compile Include="Commands\Launch.cs" />
     <Compile Include="Config.cs" />
+    <Compile Include="Enums\VipWinner.cs" />
+    <Compile Include="Extensions\ItemExtensions.cs" />
+    <Compile Include="Extensions\SpawnExtensions.cs" />
     <Compile Include="Games\GunGame.cs" />
+    <Compile Include="Games\Vip.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Translations.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

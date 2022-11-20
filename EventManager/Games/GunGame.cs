@@ -9,12 +9,15 @@ using Exiled.API.Enums;
 using System.Linq;
 using Respawning;
 using Exiled.Events.Commands.Reload;
+using Dissonance;
+using EventManager.Extensions;
 
 namespace EventManager.Games
 {
     public class GunGame
     {
         public static bool IsStarted;
+        public static float DefaultSpawnProtectTime;
 
         public static ZoneType StartZone;
 
@@ -22,15 +25,15 @@ namespace EventManager.Games
 
         public void Init()
         {
-            if (!Plugin.Singleton.Config.GunGameCustomSpawn)
+            if (!Plugin.singleton.Config.GunGameCustomSpawn)
             {
-                switch (Plugin.Singleton.Config.GunGameZone)
+                switch (Plugin.singleton.Config.GunGameZone)
                 {
                     case ZoneType.Surface:
                     case ZoneType.Entrance:
                     case ZoneType.HeavyContainment:
                     case ZoneType.LightContainment:
-                        StartZone = Plugin.Singleton.Config.GunGameZone;
+                        StartZone = Plugin.singleton.Config.GunGameZone;
                         break;
                     default:
                         Log.Warn($"[GUNGAME] config gun_game_zone has not a ZoneType (Surface,Entrance, HeavyContainment or LightContainment). I choose default zone, {ZoneType.HeavyContainment}.");
@@ -44,26 +47,35 @@ namespace EventManager.Games
             }
         }
 
+        public void ReloadedConfigs()
+        {
+            Init();
+        }
+
         public static void Start(Player Starter)
         {
-            if (!Round.IsStarted || IsStarted || Plugin.GameAlreadyEnabled)
+            if (!Round.IsStarted || !IsStarted || !Plugin.AnotherGamerHasEnabled)
             {
+                DefaultSpawnProtectTime = Server.SpawnProtectTime;
                 Server.FriendlyFire = true;
-                Server.SpawnProtectTime = Plugin.Singleton.Config.GunGameSpawnProtectTime;
-                Log.Debug($"GunGame mode has been started by {Starter.Nickname} !",Plugin.Singleton.Config.Debug);
+                Server.SpawnProtectTime = Plugin.singleton.Config.GunGameSpawnProtectTime;
+                Log.Debug($"GunGame mode has been started by {Starter.Nickname} !",Plugin.singleton.Config.Debug);
                 LightContainmentZoneDecontamination.DecontaminationController.Singleton.disableDecontamination = true;
                 Round.Start();
                 Round.IsLocked = true;
                 IsStarted = true;
-                Plugin.GameAlreadyEnabled = true;
+                Plugin.AnotherGamerHasEnabled = true;
 
                 foreach (Player plr in Player.List)
                 {
                     PlayersGunRank.Add(plr, 1);
-                    plr.SetRole(RoleType.ClassD,SpawnReason.RoundStart);
+                    Timing.CallDelayed(2f, () =>
+                    {
+                        plr.SetRole(RoleType.Tutorial,SpawnReason.RoundStart);
+                    });
                     plr.ShowHint("starting game : <color=yellow>gungame</color>...",int.MaxValue);
                 }
-                Timing.CallDelayed(2f, () => 
+                Timing.CallDelayed(Plugin.singleton.Config.WaitTimeToStartGame, () =>
                 {
                     Suite();
                 });
@@ -78,30 +90,19 @@ namespace EventManager.Games
         {
             foreach (Player plr in PlayersGunRank.Keys)
             {
-                if (Plugin.Singleton.Config.GunGameCustomSpawn)
+                plr.SetRole(RoleType.ClassD, SpawnReason.RoundStart);
+                if (Plugin.singleton.Config.GunGameCustomSpawn)
                 {
-                    Vector3 CustomSpawn = Plugin.Singleton.Config.GunGameCustomSpawnLocation;
+                    Vector3 CustomSpawn = Plugin.singleton.Config.GunGameCustomSpawnLocation;
                     plr.Position = CustomSpawn + new Vector3(0, 1, 0);
                 }
                 else
                 {
-                    Room room = Room.Random(StartZone);
-                    while (true)
-                    {
-                        if (room.Type == RoomType.Pocket || room.Type == RoomType.HczArmory || room.Type == RoomType.HczEzCheckpoint || room.Type == RoomType.Hcz096 || room.Type == RoomType.HczChkpA || room.Type == RoomType.HczChkpB || room.Type == RoomType.LczChkpA || room.Type == RoomType.LczChkpB || room.Type == RoomType.LczArmory || room.Type == RoomType.EzCollapsedTunnel)
-                        {
-                            room = Room.Random(StartZone);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                    plr.Position = room.Position + new Vector3(0, 1, 0);
+                    plr.Respawn(typeof(GunGame));
                 }
-                string StartMsg = Plugin.Singleton.Config.GunGameStartMsg.Replace("{time}",Plugin.Singleton.Config.GunGameSpawnProtectTime.ToString());
-                plr.ShowHint(StartMsg,Plugin.Singleton.Config.GunGameSpawnProtectTime);
-                ChangeItem(plr, PlayersGunRank[plr]);
+                string StartMsg = Plugin.singleton.Config.GunGameStartMsg.Replace("{time}",Plugin.singleton.Config.GunGameSpawnProtectTime.ToString());
+                plr.ShowHint(StartMsg,Plugin.singleton.Config.GunGameSpawnProtectTime);
+                GiveItem(plr);
             }
         }
 
@@ -109,135 +110,78 @@ namespace EventManager.Games
         {
             if (PlayersGunRank.ContainsKey(AddRank))
             {
-                AddRank.ShowHint(Plugin.Singleton.Config.GunGameNextLevel);
+                AddRank.ShowHint(Plugin.singleton.Config.GunGameNextLevel);
                 PlayersGunRank[AddRank] += 1;
-                ChangeItem(AddRank, PlayersGunRank[AddRank]);
+                GiveItem(AddRank);
             }
         }
 
-        public static void LostLevel(Player AddRank)
+        public static void LostLevel(Player RemoveRank)
         {
-            if (PlayersGunRank.ContainsKey(AddRank))
+            if (PlayersGunRank.ContainsKey(RemoveRank))
             {
-                PlayersGunRank[AddRank] -= 1;
-                ChangeItem(AddRank, PlayersGunRank[AddRank]);
+                RemoveRank.ShowHint(Plugin.singleton.Config.GunGameLostLevel);
+                PlayersGunRank[RemoveRank] -= 1;
+                GiveItem(RemoveRank);
             }
         }
 
-        //Current order : Micro-HID, 3-X Particle Disrupter, Logicer, Shotgun, AK, MTF-E11-SR, Crossvec, FSP-9, .44 Revolver, COM-18, COM-15, Grenade
-        public static void ChangeItem(Player plr,int NewRank)
+        //default order : Micro-HID, 3-X Particle Disrupter, Logicer, Shotgun, AK, MTF-E11-SR, Crossvec, FSP-9, .44 Revolver, COM-18, COM-15, Grenade
+        public static void GiveItem(Player plr)
         {
             plr.ClearInventory();
 
-            if (NewRank <= 0)
+            int Rank = PlayersGunRank[plr]-1;
+
+            ItemType[] ItemToAdd = Plugin.singleton.Config.GunGameOrder;
+            
+            if (Rank < ItemToAdd.Count())
             {
-                plr.AddItem(ItemType.MicroHID);
-                plr.AddItem(ItemType.MicroHID);
-                plr.AddItem(ItemType.MicroHID);
-                plr.AddItem(ItemType.Adrenaline);
+                if (!ItemToAdd[Rank].IsWeapon(false, false))
+                {
+                    plr.AddItem(ItemToAdd[Rank]);
+                    plr.AddItem(ItemToAdd[Rank]);
+                    plr.AddItem(ItemToAdd[Rank]);
+                    plr.AddItem(ItemType.Adrenaline);
+                }
+                else
+                {
+                    plr.AddItem(ItemToAdd[Rank]);
+                    plr.SetAmmo(ItemToAdd[Rank].GetWeaponAmmoType(), 500);
+                    if (ItemToAdd[Rank - 1].IsWeapon(false, false))
+                        plr.SetAmmo(ItemToAdd[Rank - 1].GetWeaponAmmoType(), 0);
+                    plr.AddItem(ItemType.Adrenaline);
+                }
             }
-            if (NewRank == 1)
-            {
-                plr.AddItem(ItemType.MicroHID);
-                plr.AddItem(ItemType.MicroHID);
-                plr.AddItem(ItemType.MicroHID);
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 2)
-            {
-                plr.AddItem(ItemType.ParticleDisruptor);
-                plr.AddItem(ItemType.ParticleDisruptor);
-                plr.AddItem(ItemType.ParticleDisruptor);
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 3)
-            {
-                plr.AddItem(ItemType.GunLogicer);
-                plr.AddAmmo(ItemType.GunLogicer.GetWeaponAmmoType(), 500);
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 4)
-            {
-                plr.AddItem(ItemType.GunShotgun);
-                plr.SetAmmo(ItemType.GunLogicer.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunShotgun.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 5)
-            {
-                plr.AddItem(ItemType.GunAK);
-                plr.SetAmmo(ItemType.GunShotgun.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunAK.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 6)
-            {
-                plr.AddItem(ItemType.GunE11SR);
-                plr.SetAmmo(ItemType.GunAK.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunE11SR.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 7)
-            {
-                plr.AddItem(ItemType.GunCrossvec);
-                plr.SetAmmo(ItemType.GunE11SR.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunCrossvec.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 8)
-            {
-                plr.AddItem(ItemType.GunFSP9);
-                plr.SetAmmo(ItemType.GunCrossvec.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunFSP9.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 9)
-            {
-                plr.AddItem(ItemType.GunRevolver);
-                plr.SetAmmo(ItemType.GunFSP9.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunRevolver.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 10)
-            {
-                plr.AddItem(ItemType.GunCOM18);
-                plr.SetAmmo(ItemType.GunRevolver.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunCOM18.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 11)
-            {
-                plr.AddItem(ItemType.GunCOM15);
-                plr.SetAmmo(ItemType.GunCOM18.GetWeaponAmmoType(), 0);
-                plr.AddAmmo(ItemType.GunCOM15.GetWeaponAmmoType(), 500);                
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank == 12)
-            {
-                plr.SetAmmo(ItemType.GunCOM15.GetWeaponAmmoType(), 0);
-                plr.AddItem(ItemType.GrenadeHE);
-                plr.AddItem(ItemType.GrenadeHE);
-                plr.AddItem(ItemType.GrenadeHE);
-                plr.AddItem(ItemType.Adrenaline);
-            }
-            if (NewRank >= 13)
+            if (Rank >= ItemToAdd.Count())
             {
                 plr.ClearInventory();
-                plr.AddItem(ItemType.ParticleDisruptor);
-                plr.AddItem(ItemType.ParticleDisruptor);
-                plr.AddItem(ItemType.ParticleDisruptor);
                 foreach (Player Left in Player.List.Where(x => x.UserId != plr.UserId))
                 {
                     Left.SetRole(RoleType.Spectator,SpawnReason.Overwatch);
-                    string Winner = Plugin.Singleton.Config.GunGameWinnerMsgForLost.Replace("{winner}", plr.Nickname);
-                    Left.Broadcast(Plugin.Singleton.Config.GunGameWinnerDuration, Winner);
+                    string Winner = Plugin.singleton.Config.GunGameWinnerMsgForLost.Replace("{winner}", plr.Nickname);
+                    Left.Broadcast(Plugin.singleton.Config.GunGameWinnerDuration, Winner);
                 }
-                plr.Broadcast(Plugin.Singleton.Config.GunGameWinnerDuration, Plugin.Singleton.Config.GunGameWinnerMsgForWinner);
+                plr.Broadcast(Plugin.singleton.Config.GunGameWinnerDuration, Plugin.singleton.Config.GunGameWinnerMsgForWinner);
                 IsStarted = false;
-                Plugin.GameAlreadyEnabled = false;
+                Plugin.AnotherGamerHasEnabled = false;
+                Server.SpawnProtectTime = DefaultSpawnProtectTime;
+                Server.FriendlyFire = false;
                 Round.EndRound(true);
                 Round.IsLocked = false;
                 return;
+            }
+        }
+
+        public void Throwing(ThrowingItemEventArgs ev)
+        {
+            if (IsStarted && ev.Item.Type != ItemType.GrenadeHE)
+            {
+                ev.IsAllowed = false;
+            }
+            else
+            {
+                ev.IsAllowed = true;
             }
         }
 
@@ -246,7 +190,7 @@ namespace EventManager.Games
             if (IsStarted)
             {
                 ev.IsAllowed = false;
-                ev.Player.ShowHint(Plugin.Singleton.Config.GunGameElevunauthorized);
+                ev.Player.ShowHint(Plugin.singleton.Config.GunGameElevunauthorized);
             }
         }
 
@@ -267,7 +211,7 @@ namespace EventManager.Games
             if (IsStarted && ev.Door.IsKeycardDoor)
             {
                 ev.IsAllowed = false;
-                ev.Player.ShowHint(Plugin.Singleton.Config.GunGameDoorunauthorized);
+                ev.Player.ShowHint(Plugin.singleton.Config.GunGameDoorunauthorized);
             }
         }
 
@@ -280,22 +224,22 @@ namespace EventManager.Games
                     if (ev.Killer == ev.Target)
                     {
                         LostLevel(ev.Killer);
-                        ev.Target.ShowHint(Plugin.Singleton.Config.GunGameLostLevel, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
+                        ev.Target.ShowHint(Plugin.singleton.Config.GunGameLostLevel, Plugin.singleton.Config.GunGameTimeBeforeRespawning);
                     }
                     else
                     {
                         AddLevel(ev.Killer);
-                        string DeadMsg = Plugin.Singleton.Config.GunGameDeadMsg.Replace("{time}", Plugin.Singleton.Config.GunGameTimeBeforeRespawning.ToString());
-                        ev.Target.ShowHint(DeadMsg, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
+                        string DeadMsg = Plugin.singleton.Config.GunGameDeadMsg.Replace("{time}", Plugin.singleton.Config.GunGameTimeBeforeRespawning.ToString());
+                        ev.Target.ShowHint(DeadMsg, Plugin.singleton.Config.GunGameTimeBeforeRespawning);
                     }
                 }
                 if (ev.Killer == null)
                 {
-                    string DeadMsg = Plugin.Singleton.Config.GunGameDeadMsg.Replace("{time}", Plugin.Singleton.Config.GunGameTimeBeforeRespawning.ToString());
-                    ev.Target.ShowHint(DeadMsg, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
+                    string DeadMsg = Plugin.singleton.Config.GunGameDeadMsg.Replace("{time}", Plugin.singleton.Config.GunGameTimeBeforeRespawning.ToString());
+                    ev.Target.ShowHint(DeadMsg, Plugin.singleton.Config.GunGameTimeBeforeRespawning);
                 }
 
-                Timing.CallDelayed(Plugin.Singleton.Config.GunGameTimeBeforeRespawning, () => {Spawn(ev.Target); });
+                Timing.CallDelayed(Plugin.singleton.Config.GunGameTimeBeforeRespawning, () => {Spawn(ev.Target); });
             }
         }
 
@@ -304,32 +248,68 @@ namespace EventManager.Games
             Spawner.SetRole(RoleType.ClassD, SpawnReason.Revived);
             Timing.CallDelayed(2f, () =>
             {
-                if (Plugin.Singleton.Config.GunGameCustomSpawn)
+                if (Plugin.singleton.Config.GunGameCustomSpawn)
                 {
-                    Vector3 CustomSpawn = Plugin.Singleton.Config.GunGameCustomSpawnLocation;
+                    Vector3 CustomSpawn = Plugin.singleton.Config.GunGameCustomSpawnLocation;
                     Spawner.Position = CustomSpawn + new Vector3(0, 1, 0);
                 }
                 else
                 {
-                    Room room = Room.Random(StartZone);
-                    while (true)
-                    {
-                        if (room.Type == RoomType.Pocket || room.Type == RoomType.HczArmory || room.Type == RoomType.HczEzCheckpoint || room.Type == RoomType.Hcz096 || room.Type == RoomType.HczChkpA || room.Type == RoomType.HczChkpB || room.Type == RoomType.LczChkpA || room.Type == RoomType.LczChkpB || room.Type == RoomType.LczArmory || room.Type == RoomType.EzCollapsedTunnel)
-                        {
-                            room = Room.Random(StartZone);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                    Spawner.Position = room.Position + new Vector3(0, 1, 0);
+                    Spawner.Respawn(typeof(GunGame));
                 }
-                ChangeItem(Spawner, PlayersGunRank[Spawner]);
+                GiveItem(Spawner);
             });
         }
 
-        public void PickupItem(PickingUpItemEventArgs ev)
+        public void Pickup(PickingUpItemEventArgs ev)
+        {
+            if (IsStarted)
+            {
+                ev.IsAllowed = false;
+            }
+            else
+            {
+                ev.IsAllowed = true;
+            }
+        }
+
+        public void Pickup(PickingUpAmmoEventArgs ev)
+        {
+            if (IsStarted)
+            {
+                ev.IsAllowed = false;
+            }
+            else
+            {
+                ev.IsAllowed = true;
+            }
+        }
+
+        public void Pickup(PickingUpArmorEventArgs ev)
+        {
+            if (IsStarted)
+            {
+                ev.IsAllowed = false;
+            }
+            else
+            {
+                ev.IsAllowed = true;
+            }
+        }
+
+        public void Dropping(DroppingAmmoEventArgs ev)
+        {
+            if (IsStarted)
+            {
+                ev.IsAllowed = false;
+            }
+            else
+            {
+                ev.IsAllowed = true;
+            }
+        }
+
+        public void Dropping(DroppingItemEventArgs ev)
         {
             if (IsStarted)
             {
@@ -345,7 +325,7 @@ namespace EventManager.Games
         {
             if (IsStarted)
             {
-                Plugin.GameAlreadyEnabled = false;
+                Plugin.AnotherGamerHasEnabled = false;
                 IsStarted = false;
                 PlayersGunRank.Clear();
             }
@@ -367,9 +347,10 @@ namespace EventManager.Games
             if (IsStarted)
             {
                 PlayersGunRank.Add(ev.Player, 1);
-                string SpawnMsg = Plugin.Singleton.Config.GunGameLateJoinMsg.Replace("{time}", Plugin.Singleton.Config.GunGameTimeBeforeRespawning.ToString());
-                ev.Player.ShowHint(SpawnMsg, Plugin.Singleton.Config.GunGameTimeBeforeRespawning);
-                Timing.CallDelayed(5f, () => { Spawn(ev.Player); });
+                float time = Plugin.singleton.Config.GunGameTimeBeforeRespawning > 2f ? Plugin.singleton.Config.GunGameTimeBeforeRespawning : 2;
+                string SpawnMsg = Plugin.singleton.Config.GunGameLateJoinMsg.Replace("{time}", time.ToString());
+                ev.Player.ShowHint(SpawnMsg, time);
+                Timing.CallDelayed(Plugin.singleton.Config.GunGameTimeBeforeRespawning, () => { Spawn(ev.Player); });
             }
         }
     }

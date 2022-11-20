@@ -6,11 +6,13 @@ using UnityEngine;
 
 namespace EventManager
 {
-    public class Config:IConfig
+    public class Config : IConfig
     {
         public bool IsEnabled { get; set; } = true;
 
-        public bool Debug { get; set; } = false;
+        public bool Debug { get; set; } = true;
+
+        public float WaitTimeToStartGame { get; set; } = 2f;
 
         [Description("the areas where the fight takes place (Surface,Entrance, HeavyContainment and LightContainment)")]
         public ZoneType GunGameZone { get; set; } = ZoneType.HeavyContainment;
@@ -57,6 +59,20 @@ namespace EventManager
         [Description("the message who all players displayed. equivalent to spawn protect message time. ({time} = gun_game_spawn_protect_time)")]
         public string GunGameStartMsg { get; set; } = "the game start in {time} seconds !";
 
-        //public List<ItemType> GunGameOrder { get; set; } = new List<ItemType>(){};
+        public ItemType[] GunGameOrder { get; set; } =
+        {
+            ItemType.MicroHID,
+            ItemType.ParticleDisruptor,
+            ItemType.GunLogicer,
+            ItemType.GunShotgun,
+            ItemType.GunAK,
+            ItemType.GunE11SR,
+            ItemType.GunCrossvec,
+            ItemType.GunFSP9,
+            ItemType.GunRevolver,
+            ItemType.GunCOM18,
+            ItemType.GunCOM15,
+            ItemType.GrenadeHE,
+        };
     }
 }
